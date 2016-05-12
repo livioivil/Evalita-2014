@@ -1,0 +1,203 @@
+---
+title: "Esempio Analisi"
+author: "Livio Finos"
+date: "05/03/2016"
+output: html_document
+---
+
+# Intro
+
+Leggo i dati preprocessati e le funzioni per calcolare l'errore:
+
+```{r}
+rm(list=ls())
+try(setwd("/home/livio/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
+try(setwd("C:/Users/User/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
+load("dati_FunScore.Rdata")
+```
+
+Mi creo un test set per uso interno estraendolo dal training set:
+
+```{r}
+set.seed(1)
+id_test=sample(nrow(tweets),700)
+```
+
+# Riduzione della DTM
+```{r}
+#le prime tre colonne sono sentiment e ncaratteri:
+names(X[,1:8])
+
+dim(X)
+```
+
+Molte parole sono presenti pochissime volte, ad esempio tengo solo quelle che sono presenti almeno 50 volte
+
+```{r}
+table(colSums(X[,-(1:3)]))
+```
+
+```{r}
+dtm=X[,-(1:3)]
+dtm=dtm[,colSums(dtm)>=50]
+X=cbind(X[,1:3],dtm)
+dim(X)
+```
+
+Da prove siccessive risulta che `not` sia combinazione lineare di altre variabili. lo escludo nella analisi che seguono:
+
+```{r}
+X$not=NULL
+```
+
+
+# Modelli di previsione
+## Task 1
+```{r}
+modlm=lm(tweets$subj[-id_test]~.,data=X[-id_test,])
+summary(modlm)
+```
+
+Come scelgo la soglia (il threshold) per la classificazione?
+
+Una proposta tra tante: Quantile della proporzione di zeri (sul training set stimo la stessa proporzione di 1 osservati nel vettore `tweets$obj`). non è detto che sia la scelta migliore (vedi anche dopo).
+
+```{r}
+thr=quantile(predict(modlm),prop.table(table(tweets$subj[-id_test]))[1])
+thr
+tab=table( tweets$subj[id_test],predict(modlm,newdata = X[id_test,])>thr)
+tab
+
+F_subj=F_class(true = tweets$subj[id_test] ,(predict(modlm,newdata = X[id_test,])>thr)==1)
+F_obj=F_class(true = tweets$subj[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0)
+(F_obj+F_subj)/2
+```
+
+## Task2: polarity classification
+
+Modello per prevedere `pos`
+```{r}
+modlm_pos=lm(tweets$pos[-id_test]~.,data=X[-id_test,])
+summary(modlm_pos)
+
+# tab=table( tweets$pos[id_test],predict(modlm_pos,newdata = X[id_test,])>.5)
+thr=quantile(predict(modlm_pos),prop.table(table(tweets$pos[-id_test]))[1])
+thr
+tab=table( tweets$pos[id_test],predict(modlm_pos,newdata = X[id_test,])>thr)
+
+tab
+
+F_pos_1=F_class( tweets$pos[id_test]==1,(predict(modlm_pos,newdata = X[id_test,])>thr)==1)
+F_pos_0=F_class( tweets$pos[id_test]==0,(predict(modlm_pos,newdata = X[id_test,])>thr)==0)
+
+```
+
+
+Modello per prevedere `neg`
+```{r}
+modlm_neg=lm(tweets$neg[-id_test]~.,data=X[-id_test,])
+summary(modlm_neg)
+
+# tab=table( tweets$neg[id_test],predict(modlm_neg,newdata = X[id_test,])>.5)
+thr=quantile(predict(modlm_neg),prop.table(table(tweets$neg[-id_test]))[1])
+tab=table( tweets$neg[id_test],predict(modlm_neg,newdata = X[id_test,])>thr)
+
+tab
+
+F_neg_1=F_class( tweets$neg[id_test]==1,(predict(modlm_neg,newdata = X[id_test,])>thr)==1)
+F_neg_0=F_class( tweets$neg[id_test]==0,(predict(modlm_neg,newdata = X[id_test,])>thr)==0)
+
+```
+
+Punteggio stimato sul test set:
+
+```{r}
+((F_neg_0+F_neg_1)/2+(F_pos_0+F_pos_1)/2)/2
+```
+
+
+## Task 3
+
+```{r}
+modlm=lm(tweets$iro[-id_test]~.,data=X[-id_test,])
+summary(modlm)
+
+thr=quantile(predict(modlm),prop.table(table(tweets$iro[-id_test]))[1])
+thr
+tab=table( tweets$iro[id_test],predict(modlm,newdata = X[id_test,])>thr)
+tab
+
+F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1)
+F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0)
+(F_iro+F_noiro)/2
+```
+
+# Come scegliere tra diversi modelli?
+
+Come scegliere il miglior modello tra diversi possibili?
+
+Sappiamo che onfrontare gli indici calcolati sugli stessi dati su cui abbiamo stimato i parametri del modello non è una buona idea...
+
+Cosa proponete?
+
+
+
+# EXTRA
+
+Posso provare a migliorare il risultato ottimizzando il threshold (Es Task 3):
+
+*ATTENZIONE* su quale dataset ottimizzo il threshold??
+
+```{r}
+# ne faccio una funzione
+getScore <- function(thr){ 
+  F_iro=F_class(true = tweets$iro[-id_test] ,(predict(modlm)>thr)==1,verbatim=FALSE)
+  F_noiro=F_class(true = tweets$iro[-id_test]==0 ,(predict(modlm)>thr)==0,verbatim=FALSE)
+  (F_iro+F_noiro)/2
+  }
+
+
+range(predict(modlm))
+#lo riduco un po':
+limiti_valori_da_provare=range(predict(modlm))*.9
+valori_da_provare=seq(limiti_valori_da_provare[1],limiti_valori_da_provare[2],length.out = 20)
+
+scores=sapply(valori_da_provare,getScore)
+
+results=cbind(thr=valori_da_provare,scoreTrain=scores)
+results
+plot(valori_da_provare,scores,type = "l",col=2)
+
+max(scores,na.rm = TRUE)
+thr=valori_da_provare[which.max(scores)]
+thr
+```
+
+
+ora lo provo sul test set!
+```{r}
+F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1,verbatim=FALSE)
+F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0,verbatim=FALSE)
+(F_iro+F_noiro)/2
+```
+
+- Calcoliamo l'errore solo per questo threshold. se cercassi il massimo incorrerei in distorsione nella stima (stimo il max tra molti)
+
+
+A titolo di curiosità calcolo gli errori per i diversi treshold sul test set:
+
+```{r}
+getScoreTest <- function(thr){
+  F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1,verbatim=FALSE)
+  F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0,verbatim=FALSE)
+  (F_iro+F_noiro)/2
+}
+
+scoresTest=sapply(valori_da_provare,getScoreTest)
+
+results=cbind(results, scoreTest=scoresTest)
+results
+matplot(valori_da_provare,results[,-1],type = "l",col=2:3,lty=1,lwd=2,ylab="Scores")
+legend("topleft",legend = colnames(results)[-1],lwd=2,lty=1,col=2:3,bty="n")
+```
+

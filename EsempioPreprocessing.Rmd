@@ -1,0 +1,258 @@
+---
+title: "Preprocessing tweets"
+author: "Livio Finos"
+date: "05/03/2016"
+output: html_document
+---
+
+# Intro
+alcuni codici di esempio per generare la matrice di predittori a partire dai tweets
+
+```{r}
+
+try(setwd("/home/livio/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
+try(setwd("C:/Users/User/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
+
+# http://46.51.205.81/dump_tweets/any_ita/
+train=read.csv("dataset/train/SENTIPOLC Sentiment Polarity Classification - Evalita 2014.csv",numerals="no.loss")
+str(train)
+
+# test=read.csv("dataset/test/sentipolc14_gold_test.csv",head=FALSE)
+# str(test)
+
+tweets=train
+```
+
+Ci sono molti `Tweet Not Available`
+```{r}
+table(train$TEXT=="Tweet Not Available")
+```
+
+siamo costretti ad eliminarli
+
+```{r}
+tweets=tweets[tweets$TEXT!="Tweet Not Available",]
+```
+
+## Numero di caratteri per tweet
+```{r}
+nchars=  sapply(as.vector(tweets$TEXT),nchar)
+nchars=as.vector(nchars)
+boxplot(nchars~tweets$subj)
+t.test(nchars~tweets$subj)
+boxplot(nchars~tweets$pos)
+t.test(nchars~tweets$pos)
+boxplot(nchars~tweets$neg)
+t.test(nchars~tweets$neg)
+```
+
+pare essere interessante, lo teniamo come predittore
+
+# Normalizzazione del testo
+Si possono seguire molte strade, ovviamente.
+
+Trovate una accurata review qui (chi vuole approfondire poi condifida anche):
+<http://sentiment.christopherpotts.net/>
+
+```{r}
+library(TextWiller)
+tweets$TEXT=iconv(tweets$TEXT,to="UTF-8")
+tweets$TEXTorig=tweets$TEXT
+```
+
+## Gestione e moticons
+```{r}
+tweets$TEXT=normalizzaemote(tweets$TEXT)
+length(grep("EMOTE",tweets$TEXT))
+```
+
+## normalizzo i testi
+```{r}
+tweets$TEXT=gsub("…","",tweets$TEXT)
+tweets$TEXT=normalizzaTesti(tweets$TEXT,contaStringhe = c("\\?","\\!","@","#","(\u20AC|euro)","(\\$|dollar)"))
+```
+
+Salvo i conteggi delle parole specificate come matrice a parte
+
+```{r}
+conteggi_caratteri=as.data.frame(attributes(tweets$TEXT)$ counts)
+```
+
+faccio a mano alcuni preprocessamenti che possono essereq sfuggiti, elimino a questo punto i # degli hastag (questo sono già stati contati sopra). 
+Mi aiuto anche con l'anali degli n-grammi (vedi codice commentato)
+
+```{r}
+############ ricerca n-grammi più frequenti
+# install.packages("tau")
+# require(tau)
+# 
+# bigrams <- textcnt(tweets$TEXT,method="string",n=2L,split="[[:blank:]]")
+# sort(bigrams,decreasing=TRUE)[1:10]
+# sort(bigrams[grep("^stadio",names(bigrams))],decreasing=TRUE)[1:10]
+
+# trigrams <- textcnt(tweets$TEXT,method="string",n=3L,split="[[:blank:]]")
+# sort(trigrams,decreasing=TRUE)[1:10]
+
+
+tweets$TEXT <- gsub("#", "", tweets$TEXT)
+tweets$TEXT=removeStopwords(tweets$TEXT, stopwords = c(itastopwords,"…"))
+
+tweets$TEXT <- gsub("( |^)piu( |$)", " più ", tweets$TEXT)
+tweets$TEXT <- gsub("perch쎩", "perché", tweets$TEXT)
+# tweets$TEXT <- gsub("tweet not available", "tweet_not_available", tweets$TEXT)
+tweets$TEXT <- gsub("mario monti", "mario_monti", tweets$TEXT)
+tweets$TEXT <- gsub("governo monti", "governo_monti", tweets$TEXT)
+```
+
+
+## Crea Document Term Matrix 
+(= una riga per tweet, una colonna per ogni parola)
+
+```{r}
+library(tm)
+corpus <- Corpus(VectorSource(tweets$TEXT))
+data(itastopwords)
+#Elenco di parole aggiuntive caricate con TextWiller
+dtm <- as.matrix(DocumentTermMatrix(corpus
+                                    , control = list( stemming = FALSE, stopwords = itastopwords,
+                                                      minWordLength = 2, removeNumbers = TRUE,
+                                                      removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
+) #dictionary=
+
+# tweets=tweets[ids,]
+```
+
+
+Aggiungo alla dtm i conteggi della parole generale in fare di normalizzazione
+```{r}
+dtm=cbind(dtm,conteggi_caratteri)
+```
+
+
+controllo che non ci siano colonne costantemente 0.
+```{r}
+which(colSums(dtm)==0)
+```
+ok.
+
+
+
+# Assegna sentiment ai tw
+lo useremo come predittore in futuro
+
+```{r}
+sent=sentiment(tweets$TEXT)
+tweets$sent=sent
+prop.table(table(tweets$sent,exclude = NULL))
+barplot(table(tweets$sent),col=2:4)
+```
+
+### legato a subj?
+```{r}
+tab=table(tweets$sent,tweets$subj)
+prop.table(tab,1)
+mosaicplot(tab,col=1:2)
+chisq.test(tab)
+```
+
+### legato a pos?
+
+```{r}
+tab=table(tweets$sent,tweets$pos)
+prop.table(tab,1)
+mosaicplot(tab,col=1:2)
+chisq.test(tab)
+```
+
+### legato a neg?
+
+```{r}
+tab=table(tweets$sent,tweets$neg)
+prop.table(tab,1)
+mosaicplot(tab,col=1:2)
+chisq.test(tab)
+```
+
+### legato a irony?
+
+```{r}
+tab=table(tweets$sent,tweets$iro)
+prop.table(tab,1)
+mosaicplot(tab,col=1:2)
+chisq.test(tab)
+```
+
+# Creo il dataset dei predittori
+
+```{r}
+X=cbind(sentPOS=tweets$sent==1,sentNEG=tweets$sent==-1,nchars=nchars,dtm)
+```
+
+# Calcolo punteggi
+faremo sempre riferiemnto al regolamento ufficiale:
+
+<http://clic.humnet.unipi.it/proceedings/Proceedings-EVALITA-2014.pdf>
+(vedi "Overview of the Evalita 2014 SENTIment POLarity Classification Task"  a pg 50)
+
+
+## alcune funzioni utli
+è utile definire le funzioni che calcolano i punteggi finali:
+
+```{r}
+precision <- function(true,predicted){
+  sum(true[predicted==1]==1)/sum(predicted==1)
+}
+
+recall <- function(true,predicted){
+  sum(predicted[true==1]==1)/sum(true==1)
+}
+
+F_class <- function(true,predicted,verbatim=TRUE){
+  rec=recall(true,predicted)
+  pre=precision(true,predicted)
+  Fsc = 2*(pre*rec)/(pre+rec)
+ if(verbatim) print(c(recall=rec,precision=pre,F=Fsc))
+  Fsc
+} 
+```
+
+
+## Task1: subjectivity classification
+
+Punteggio finale task 1:
+`(F_obj+F_subj)/2`
+
+`(F_class( true==1,predetto==1) +F_class( true==0,predetto==0))/2`
+
+## Task2: polarity classification
+
+Punteggio finale task 2:
+`((F_neg_0+F_neg_1)/2+(F_pos_0+F_pos_1)/2)/2`
+
+per il modello che prevede i `pos` 
+`F_pos_1=F_class( true==1,predetto==1)`
+`F_pos_0=F_class( true==0,predetto==0)`
+
+Uguale per il modello che prevede i `neg` 
+`F_neg_1=F_class( true==1,predetto==1)`
+`F_neg_0=F_class( true==0,predetto==0)`
+
+
+## Task3: irony classification
+
+come task 1
+
+
+
+# salvo i dataset creati
+salvo due `data.frame` e le funzioni per calcolare i punteggi finali:
+
+- `tweets` che contiene i testi originali ed anche le classificazioni dei task 1, 2 e 3.
+- `X` la matrice dei predittori: `dtm + sentiment + nchar`
+
+```{r}
+save(file="dati_FunScore.Rdata", tweets,X, precision, recall, F_class)
+```
+
+
+buon lavoro!!
