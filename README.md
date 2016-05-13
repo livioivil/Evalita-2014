@@ -22,7 +22,7 @@ Avrete bisogno di alcuni package `R` disponibili su CRAN (ad esempio `tm`), ma a
 - [Atti del Convegno EVALITA-2014 ](http://clic.humnet.unipi.it/proceedings/Proceedings-EVALITA-2014.pdf)
 Qui trovate la descrizione delle competizioni e i modelli usati dai vincitori della competizione
 - [Training set](dataset/train/SENTIPOLC Sentiment Polarity Classification - Evalita 2014.csv)
-- [Esempio preprocessing dei dati](EsempioPreprocessing.html)
+- [Esempio preprocessing dei dati](https://rawgit.com/livioivil/Evalita-2014/master/EsempioPreprocessing.html)
 - [Dataset preprocessato e funzioni di valutazione dei risultati](dati_FunScore.Rdata)
-- [Esempio Modelli di predizione](EsempioAnalisi.html)
+- [Esempio Modelli di predizione](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi.html)
 
