@@ -38,11 +38,11 @@ tweets=tweets[tweets$TEXT!="Tweet Not Available",]
 ```{r}
 nchars=  sapply(as.vector(tweets$TEXT),nchar)
 nchars=as.vector(nchars)
-boxplot(nchars~tweets$subj)
+boxplot(nchars~tweets$subj,col=2:3)
 t.test(nchars~tweets$subj)
-boxplot(nchars~tweets$pos)
+boxplot(nchars~tweets$pos,col=2:3)
 t.test(nchars~tweets$pos)
-boxplot(nchars~tweets$neg)
+boxplot(nchars~tweets$neg,col=2:3)
 t.test(nchars~tweets$neg)
 ```
 
@@ -60,7 +60,7 @@ tweets$TEXT=iconv(tweets$TEXT,to="UTF-8")
 tweets$TEXTorig=tweets$TEXT
 ```
 
-## Gestione e moticons
+## Gestione emoticons
 ```{r}
 tweets$TEXT=normalizzaemote(tweets$TEXT)
 length(grep("EMOTE",tweets$TEXT))
@@ -134,6 +134,11 @@ controllo che non ci siano colonne costantemente 0.
 which(colSums(dtm)==0)
 ```
 ok.
+
+Dimensione della `dtm`
+```{r}
+dim(dtm)
+```
 
 
 
