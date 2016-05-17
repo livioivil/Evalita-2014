@@ -1,14 +1,28 @@
 
 # Materiale didattico per il corso di Classificazione e Analisi dei dati Multivariati AA 15/16, Università di Padova
 
+In questa esercitazione di modelli di previsione per dati testuali, faremo uso del dataset usato da 
 
-#[Sito Evalita 2014](http://www.evalita.it/2014)
+###[sentipolc-evalita14](http://www.di.unito.it/~tutreeb/sentipolc-evalita14/index.html) 
+all'interno della
+`fourth evaluation campaign of Natural Language Processing and Speech tools for Italian`:
 
-#[sentipolc-evalita14](http://www.di.unito.it/~tutreeb/sentipolc-evalita14/index.html)
+###[Evalita 2014](http://www.evalita.it/2014).
+
 
 * * *
 
-## Set up
+## Documenti e File Utili
+
+- [Atti del Convegno EVALITA-2014 ](http://clic.humnet.unipi.it/proceedings/Proceedings-EVALITA-2014.pdf)
+Qui trovate la descrizione delle competizioni e i modelli usati dai vincitori della competizione
+- [Esempio preprocessing dei dati](https://rawgit.com/livioivil/Evalita-2014/master/EsempioPreprocessing.html)
+- [Dataset preprocessato e funzioni di valutazione dei risultati](dati_FunScore.Rdata)
+- [Esempio Modelli di predizione](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi.html)
+
+Il file zip con tutti i documenti e i file dati la potete scaricare da (in alto a destra, bottone verde): [`Clone or Download` > `Dowload ZIP`](https://github.com/livioivil/Evalita-2014/archive/master.zip)
+
+## Set up `R`
 
 Avrete bisogno di alcuni package `R` disponibili su CRAN (ad esempio `tm`), ma anche del package `TextWiller` disponibile su [GitHub](https://github.com/)
 
@@ -16,13 +30,4 @@ Avrete bisogno di alcuni package `R` disponibili su CRAN (ad esempio `tm`), ma a
     library(devtools)
     install_github("livioivil/TextWiller")
 
-
-## Documenti Utili
-
-- [Atti del Convegno EVALITA-2014 ](http://clic.humnet.unipi.it/proceedings/Proceedings-EVALITA-2014.pdf)
-Qui trovate la descrizione delle competizioni e i modelli usati dai vincitori della competizione
-- [Training set](dataset/train/SENTIPOLC Sentiment Polarity Classification - Evalita 2014.csv)
-- [Esempio preprocessing dei dati](https://rawgit.com/livioivil/Evalita-2014/master/EsempioPreprocessing.html)
-- [Dataset preprocessato e funzioni di valutazione dei risultati](dati_FunScore.Rdata)
-- [Esempio Modelli di predizione](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi.html)
 
