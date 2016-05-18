@@ -9,38 +9,31 @@ output: html_document
 alcuni codici di esempio per generare la matrice di predittori a partire dai tweets
 
 ```{r}
-
-try(setwd("/home/livio/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
-try(setwd("C:/Users/User/Dropbox/didattica/CADM/aa2016/Classificazione/evalita2014"),silent = TRUE)
-
 # scaricato da http://46.51.205.81/dump_tweets/any_ita/
-train=read.csv("dataset/train/SENTIPOLC Sentiment Polarity Classification - Evalita 2014.csv",numerals="no.loss")
+train=read.csv("dataset/train.csv",numerals="no.loss")
 str(train)
 
-tweets=train
-```
+test=read.csv("dataset/test.csv",numerals="no.loss")
+str(test)
+names(train)
+test=data.frame(test,soggettivo=NA,positivo=NA,negativo=NA,ironico=NA)
 
-Ci sono molti `Tweet Not Available`
-```{r}
-table(train$TEXT=="Tweet Not Available")
-```
+tweets=rbind(train,test)
+names(tweets)[2]="TEXT"
 
-siamo costretti ad eliminarli
-
-```{r}
-tweets=tweets[tweets$TEXT!="Tweet Not Available",]
+rm(train,test)
 ```
 
 ## Numero di caratteri per tweet
 ```{r}
 nchars=  sapply(as.vector(tweets$TEXT),nchar)
 nchars=as.vector(nchars)
-boxplot(nchars~tweets$subj,col=2:3)
-t.test(nchars~tweets$subj)
-boxplot(nchars~tweets$pos,col=2:3)
-t.test(nchars~tweets$pos)
-boxplot(nchars~tweets$neg,col=2:3)
-t.test(nchars~tweets$neg)
+boxplot(nchars~tweets$soggettivo,col=2:3)
+t.test(nchars~tweets$soggettivo)
+boxplot(nchars~tweets$positivo,col=2:3)
+t.test(nchars~tweets$positivo)
+boxplot(nchars~tweets$negativo,col=2:3)
+t.test(nchars~tweets$negativo)
 ```
 
 pare essere interessante, lo teniamo come predittore
@@ -99,6 +92,7 @@ tweets$TEXT <- gsub("perch쎩", "perché", tweets$TEXT)
 # tweets$TEXT <- gsub("tweet not available", "tweet_not_available", tweets$TEXT)
 tweets$TEXT <- gsub("mario monti", "mario_monti", tweets$TEXT)
 tweets$TEXT <- gsub("governo monti", "governo_monti", tweets$TEXT)
+tweets$TEXT <- gsub("professor monti", "professor_monti", tweets$TEXT)
 ```
 
 
@@ -149,36 +143,36 @@ prop.table(table(tweets$sent,exclude = NULL))
 barplot(table(tweets$sent),col=2:4)
 ```
 
-### legato a subj?
+### legato a soggettivo?
 ```{r}
-tab=table(tweets$sent,tweets$subj)
+tab=table(tweets$sent,tweets$soggettivo)
 prop.table(tab,1)
 mosaicplot(tab,col=1:2)
 chisq.test(tab)
 ```
 
-### legato a pos?
+### legato a positivo?
 
 ```{r}
-tab=table(tweets$sent,tweets$pos)
+tab=table(tweets$sent,tweets$positivo)
 prop.table(tab,1)
 mosaicplot(tab,col=1:2)
 chisq.test(tab)
 ```
 
-### legato a neg?
+### legato a negativo?
 
 ```{r}
-tab=table(tweets$sent,tweets$neg)
+tab=table(tweets$sent,tweets$negativo)
 prop.table(tab,1)
 mosaicplot(tab,col=1:2)
 chisq.test(tab)
 ```
 
-### legato a irony?
+### legato a ironico?
 
 ```{r}
-tab=table(tweets$sent,tweets$iro)
+tab=table(tweets$sent,tweets$ironico)
 prop.table(tab,1)
 mosaicplot(tab,col=1:2)
 chisq.test(tab)
@@ -219,10 +213,10 @@ F_class <- function(true,predicted,verbatim=TRUE){
 ```
 
 
-## Task1: subjectivity classification
+## Task1: soggettivoectivity classification
 
 Punteggio finale task 1:
-`(F_obj+F_subj)/2`
+`(F_obj+F_soggettivo)/2`
 
 `(F_class( true==1,predetto==1) +F_class( true==0,predetto==0))/2`
 
@@ -231,16 +225,16 @@ Punteggio finale task 1:
 Punteggio finale task 2:
 `((F_neg_0+F_neg_1)/2+(F_pos_0+F_pos_1)/2)/2`
 
-per il modello che prevede i `pos` 
+per il modello che prevede i `positivo` 
 `F_pos_1=F_class( true==1,predetto==1)`
 `F_pos_0=F_class( true==0,predetto==0)`
 
-Uguale per il modello che prevede i `neg` 
+Uguale per il modello che prevede i `negativo` 
 `F_neg_1=F_class( true==1,predetto==1)`
 `F_neg_0=F_class( true==0,predetto==0)`
 
 
-## Task3: irony classification
+## Task3: ironico classification
 
 come task 1
 
