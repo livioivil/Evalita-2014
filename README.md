@@ -12,7 +12,7 @@ all'interno della
 
 Se inoltre siete interessati a parteciapre all'edizione del 2016 
 
-###[evalita 2016](http://www.di.unito.it/~tutreeb/sentipolc-evalita16/)
+###[Evalita 2016](http://www.di.unito.it/~tutreeb/sentipolc-evalita16/)
 - [descrizione dei task](http://www.evalita.it/2016/tasks)
 - su [Facebook](https://www.facebook.com/evalita2016) o Twitter @EVALITAcampaign
 
@@ -37,5 +37,3 @@ Avrete bisogno di alcuni package `R` disponibili su CRAN (ad esempio `tm`), ma a
     # install.packages("devtools") 
     library(devtools)
     install_github("livioivil/TextWiller")
-
-
