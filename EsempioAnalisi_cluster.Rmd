@@ -1,0 +1,184 @@
+---
+title: "Esempio Analisi con albero di classificazione"
+author: "Livio Finos"
+date: "09/06/2016"
+output: html_document
+---
+
+# Intro
+
+Leggo i dati preprocessati e le funzioni per calcolare l'errore:
+
+```{r}
+rm(list=ls())
+
+load("dati_FunScore.Rdata")
+
+#sostituisco
+# [1] "Conteggi.\\?"          "Conteggi.\\!"         
+# [3] "Conteggi.@"            "Conteggi.#"           
+# [5] "Conteggi.(€|euro)"     "Conteggi.(\\$|dollar)"]
+# con un nome senza caratteri speciali
+contgg=grep("Conteggi\\.",names(X))
+names(X)[contgg]=paste("simbolo",sep="",1:length(contgg))
+
+#per avere una risposta numerica 0-1:
+tweets$soggettivo=tweets$soggettivo*1
+
+
+```
+
+creo il dataset di test per usarlo in seguito e riduco `tweets` al solo training set:
+
+```{r}
+set.seed(1)
+test=tweets[is.na(tweets$soggettivo),]
+dim(test)
+Xtest=X[is.na(tweets$soggettivo),]
+dim(Xtest)
+
+X=X[!is.na(tweets$soggettivo),]
+dim(X)
+tweets=tweets[!is.na(tweets$soggettivo),]
+dim(tweets)
+```
+
+
+# Riduzione della DTM
+```{r}
+#le prime tre colonne sono sentiment e ncaratteri:
+names(X[,1:8])
+
+dim(X)
+```
+
+Molte parole sono presenti pochissime volte, ad esempio tengo solo quelle che sono presenti almeno 50 volte
+
+```{r}
+table(colSums(X[,-(1:3)]))
+```
+
+```{r}
+dtm=X[,-(1:3)]
+dtm=dtm[,colSums(dtm)>=20]
+X=cbind(X[,1:3],dtm)
+rm(dtm)
+dim(X)
+```
+
+
+# Albero di Classificazione per Task 1
+
+```{r}
+library(rpart)
+modrp=rpart(tweets$soggettivo~.,data=X,method = "class")
+printcp(modrp)
+```
+
+Tabella di confusione
+```{r}
+table(tweets$soggettivo,predict(modrp,type = "class"))
+```
+
+Threshold:
+
+```{r}
+thr=quantile(predict(modrp)[,2],1-mean(tweets$soggettivo))
+thr
+predetti=predict(modrp)[,2]>thr
+```
+
+Tabella di confusione con threshold
+
+```{r}
+table(tweets$soggettivo,predict(modrp,type = "class"))
+```
+
+### Calcolo punteggio su training set (ottimistico)
+Scelgo una soglia, non lascio decidere a rpart
+
+```{r}
+F_soggettivo=F_class(true = tweets$soggettivo ,
+                    predetti)
+F_obj=F_class(true = tweets$soggettivo==0,predetti==0)
+(F_obj+F_soggettivo)/2
+```
+
+
+
+### Previsioni su Test set
+
+```{r}
+yhat=predict(modrp,newdata = Xtest)[,2]>thr
+write.table(file='previsioni/predicted_task1_tree.txt',yhat,row.names = FALSE,col.names = FALSE)
+```
+
+
+# Massima estensione e Potatura dell'albero
+
+## Massima estensione
+
+```{r}
+modrp.ext <- rpart(tweets$soggettivo~.,data=X,method = "class",xval=10,cp=0)
+printcp(modrp.ext)
+plot(modrp.ext)
+plotcp(modrp.ext)
+```
+
+Tabella di confusione
+```{r}
+table(tweets$soggettivo,predict(modrp.ext,type = "class"))
+```
+
+
+
+### Calcolo punteggio su training set (ottimistico)
+
+```{r}
+thr=quantile(predict(modrp.ext)[,2],1-mean(tweets$soggettivo))
+thr
+predetti=predict(modrp.ext)[,2]>thr
+F_soggettivo=F_class(true = tweets$soggettivo ,
+                    predetti)
+F_obj=F_class(true = tweets$soggettivo==0,predetti==0)
+(F_obj+F_soggettivo)/2
+```
+
+
+
+### Previsioni su Test set
+
+```{r}
+yhat=predict(modrp.ext,newdata = Xtest)[,2]>thr
+write.table(file='previsioni/predicted_task1_tree_max.txt',yhat,row.names = FALSE,col.names = FALSE)
+```
+
+## Potatura
+```{r}
+modrp.prune= prune(modrp.ext,cp = .005)
+printcp(modrp.prune)
+plot(modrp.prune)
+plotcp(modrp.prune)
+```
+
+
+### Calcolo punteggio su training set (ottimistico)
+
+```{r}
+thr=quantile(predict(modrp.prune)[,2],1-mean(tweets$soggettivo))
+thr
+predetti=predict(modrp.prune)[,2]>thr
+F_soggettivo=F_class(true = tweets$soggettivo ,
+                    predetti)
+F_obj=F_class(true = tweets$soggettivo==0,predetti==0)
+(F_obj+F_soggettivo)/2
+```
+
+
+
+### Previsioni su Test set
+
+```{r}
+yhat=predict(modrp.prune,newdata = Xtest)[,2]>thr
+write.table(file='previsioni/predicted_task1_tree_prune.txt',yhat,row.names = FALSE,col.names = FALSE)
+```

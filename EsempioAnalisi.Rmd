@@ -15,7 +15,7 @@ rm(list=ls())
 load("dati_FunScore.Rdata")
 ```
 
-creo il dataset di test per usarlo in seguito e ridugo `tweets` al solo training set:
+creo il dataset di test per usarlo in seguito e riduco `tweets` al solo training set:
 
 ```{r}
 set.seed(1)
@@ -87,7 +87,8 @@ F_obj=F_class(true = tweets$soggettivo[id_test]==0 ,(predict(modlm,newdata = X[i
 
 ```{r}
 yhat=predict(modlm,newdata = Xtest[,])>thr
-write.table(file='predicted_task1.txt', yhat)
+write.table(file='previsioni/predicted_task1_lm.txt',yhat,row.names = FALSE,col.names = FALSE)
+
 ```
 
 
@@ -140,7 +141,7 @@ Punteggio stimato sul test set:
 yhat=cbind(predict(modlm_pos,newdata = Xtest)>thr_pos,
            predict(modlm_neg,newdata = Xtest)>thr_neg)
 str(yhat)
-write.table(file='predicted_task2.txt', yhat,row.names = FALSE,col.names = FALSE)
+write.table(file='previsioni/predicted_task2_lm.txt', yhat,row.names = FALSE,col.names = FALSE)
 ```
 
 
@@ -164,7 +165,7 @@ F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_tes
 
 ```{r}
 yhat=predict(modlm,newdata = Xtest[,])>thr
-write.table(file='predicted_task3.txt', yhat)
+write.table(file='previsioni/predicted_task3_lm.txt', yhat,row.names = FALSE,col.names = FALSE)
 ```
 
 
