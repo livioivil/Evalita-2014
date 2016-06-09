@@ -52,7 +52,7 @@ names(X[,1:8])
 dim(X)
 ```
 
-Molte parole sono presenti pochissime volte, ad esempio tengo solo quelle che sono presenti almeno 50 volte
+Molte parole sono presenti pochissime volte, ad esempio tengo solo quelle che sono presenti almeno 20 volte
 
 ```{r}
 table(colSums(X[,-(1:3)]))
