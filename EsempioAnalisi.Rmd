@@ -65,6 +65,7 @@ dim(X)
 ```{r}
 modlm=lm(tweets$soggettivo[-id_test]~.,data=X[-id_test,])
 summary(modlm)
+modlm_soggett=modlm
 ```
 
 Come scelgo la soglia (il threshold) per la classificazione?
@@ -150,6 +151,7 @@ write.table(file='previsioni/predicted_task2_lm.txt', yhat,row.names = FALSE,col
 ```{r}
 modlm=lm(tweets$iro[-id_test]~.,data=X[-id_test,])
 summary(modlm)
+modlm_ironic=modlm
 
 thr=quantile(predict(modlm),prop.table(table(tweets$iro[-id_test]))[1])
 thr
@@ -237,4 +239,3 @@ results
 matplot(valori_da_provare,results[,-1],type = "l",col=2:3,lty=1,lwd=2,ylab="Scores")
 legend("topleft",legend = colnames(results)[-1],lwd=2,lty=1,col=2:3,bty="n")
 ```
-
