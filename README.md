@@ -27,7 +27,7 @@ Qui trovate la descrizione delle competizioni e i modelli usati dai vincitori de
 - [Esempio preprocessing dei dati](https://rawgit.com/livioivil/Evalita-2014/master/EsempioPreprocessing.html)
 - [Dataset preprocessato e funzioni di valutazione dei risultati](dati_FunScore.Rdata)
 - [Esempio Modelli di predizione con modello lineare (analisi discriminate lineare)](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi.html)
-- [Esempio Modelli di predizione con alberi di classificazione](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi_cluster.html)
+- [Esempio Modelli di predizione con alberi di classificazione](https://rawgit.com/livioivil/Evalita-2014/master/EsempioAnalisi_AlberiClassificazione.html)
 
 
 Il file zip con tutti i documenti e i file dati la potete scaricare da (in alto a destra, bottone verde): [`Clone or Download` > `Dowload ZIP`](https://github.com/livioivil/Evalita-2014/archive/master.zip)

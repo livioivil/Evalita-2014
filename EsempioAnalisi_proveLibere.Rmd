@@ -1,0 +1,311 @@
+---
+title: "Esempio Analisi"
+author: "Livio Finos"
+date: "05/03/2016"
+output: html_document
+---
+
+# Intro
+
+Leggo i dati preprocessati e le funzioni per calcolare l'errore:
+
+```{r}
+rm(list=ls())
+
+load("dati_FunScore.Rdata")
+```
+
+creo il dataset di test per usarlo in seguito e riduco `tweets` al solo training set:
+
+```{r}
+set.seed(1)
+test=tweets[is.na(tweets$soggettivo),]
+dim(test)
+Xtest=X[is.na(tweets$soggettivo),]
+dim(Xtest)
+
+X=X[!is.na(tweets$soggettivo),]
+dim(X)
+tweets=tweets[!is.na(tweets$soggettivo),]
+dim(tweets)
+```
+
+
+Mi creo un test set per uso interno estraendolo dal training set:
+
+```{r}
+set.seed(1)
+id_test=sample(nrow(tweets),700)
+```
+
+# Riduzione della DTM
+```{r}
+#le prime tre colonne sono sentiment e ncaratteri:
+names(X[,1:8])
+
+dim(X)
+```
+
+Molte parole sono presenti pochissime volte, ad esempio tengo solo quelle che sono presenti almeno 50 volte
+
+```{r}
+table(colSums(X[,-(1:3)]))
+```
+
+```{r}
+dtm=X[,-(1:3)]
+dtm=dtm[,colSums(dtm)>=50]
+X=cbind(X[,1:3],dtm)
+dim(X)
+```
+
+
+# Modelli di previsione
+## Task 1
+```{r}
+modlm=lm(tweets$soggettivo[-id_test]~.,data=X[-id_test,])
+summary(modlm)
+modlm_soggett=modlm
+```
+
+Come scelgo la soglia (il threshold) per la classificazione?
+
+Una proposta tra tante: Quantile della proporzione di zeri (sul training set stimo la stessa proporzione di 1 osservati nel vettore `tweets$obj`). non è detto che sia la scelta migliore (vedi anche dopo).
+
+```{r}
+thr=quantile(predict(modlm),prop.table(table(tweets$soggettivo[-id_test]))[1])
+thr
+tab=table( tweets$soggettivo[id_test],predict(modlm,newdata = X[id_test,])>thr)
+tab
+
+F_soggettivo=F_class(true = tweets$soggettivo[id_test] ,(predict(modlm,newdata = X[id_test,])>thr)==1)
+F_obj=F_class(true = tweets$soggettivo[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0)
+(F_obj+F_soggettivo)/2
+```
+
+
+### Creazione previsioni dataset Test
+
+```{r}
+yhat=predict(modlm,newdata = Xtest[,])>thr
+write.table(file='previsioni/predicted_task1_lm.txt',yhat,row.names = FALSE,col.names = FALSE)
+
+```
+
+
+## Task2: polarity classification
+
+Modello per prevedere `positivo`
+```{r}
+modlm_pos=lm(tweets$positivo[-id_test]~.,data=X[-id_test,])
+summary(modlm_pos)
+
+# tab=table( tweets$positivo[id_test],predict(modlm_pos,newdata = X[id_test,])>.5)
+thr_pos=quantile(predict(modlm_pos),prop.table(table(tweets$positivo[-id_test]))[1])
+thr_pos
+tab=table( tweets$positivo[id_test],predict(modlm_pos,newdata = X[id_test,])>thr_pos)
+
+tab
+
+F_pos_1=F_class( tweets$positivo[id_test]==1,(predict(modlm_pos,newdata = X[id_test,])>thr)==1)
+F_pos_0=F_class( tweets$positivo[id_test]==0,(predict(modlm_pos,newdata = X[id_test,])>thr)==0)
+
+```
+
+
+Modello per prevedere `negativo`
+```{r}
+modlm_neg=lm(tweets$negativo[-id_test]~.,data=X[-id_test,])
+summary(modlm_neg)
+
+# tab=table( tweets$negativo[id_test],predict(modlm_neg,newdata = X[id_test,])>.5)
+thr_neg=quantile(predict(modlm_neg),prop.table(table(tweets$negativo[-id_test]))[1])
+thr_neg
+tab=table( tweets$negativo[id_test],predict(modlm_neg,newdata = X[id_test,])>thr_neg)
+
+tab
+
+F_neg_1=F_class( tweets$negativo[id_test]==1,(predict(modlm_neg,newdata = X[id_test,])>thr)==1)
+F_neg_0=F_class( tweets$negativo[id_test]==0,(predict(modlm_neg,newdata = X[id_test,])>thr)==0)
+
+```
+
+Punteggio stimato sul test set:
+
+```{r}
+((F_neg_0+F_neg_1)/2+(F_pos_0+F_pos_1)/2)/2
+```
+
+### Creazione previsioni dataset Test
+
+```{r}
+yhat=cbind(predict(modlm_pos,newdata = Xtest)>thr_pos,
+           predict(modlm_neg,newdata = Xtest)>thr_neg)
+str(yhat)
+write.table(file='previsioni/predicted_task2_lm.txt', yhat,row.names = FALSE,col.names = FALSE)
+```
+
+
+## Task 3
+
+```{r}
+modlm=lm(tweets$iro[-id_test]~.,data=X[-id_test,])
+summary(modlm)
+modlm_ironic=modlm
+
+thr=quantile(predict(modlm),prop.table(table(tweets$iro[-id_test]))[1])
+thr
+tab=table( tweets$iro[id_test],predict(modlm,newdata = X[id_test,])>thr)
+tab
+
+F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1)
+F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0)
+(F_iro+F_noiro)/2
+```
+
+### Creazione previsioni dataset Test
+
+```{r}
+yhat=predict(modlm,newdata = Xtest[,])>thr
+write.table(file='previsioni/predicted_task3_lm.txt', yhat,row.names = FALSE,col.names = FALSE)
+```
+
+
+# Come scegliere tra diversi modelli?
+
+Come scegliere il miglior modello tra diversi possibili?
+
+Sappiamo che onfrontare gli indici calcolati sugli stessi dati su cui abbiamo stimato i parametri del modello non è una buona idea...
+
+Cosa proponete?
+
+
+
+# EXTRA
+
+Posso provare a migliorare il risultato ottimizzando il threshold (Es Task 3):
+
+*ATTENZIONE* su quale dataset ottimizzo il threshold??
+
+```{r}
+# ne faccio una funzione
+getScore <- function(thr){ 
+  F_iro=F_class(true = tweets$iro[-id_test] ,(predict(modlm)>thr)==1,verbatim=FALSE)
+  F_noiro=F_class(true = tweets$iro[-id_test]==0 ,(predict(modlm)>thr)==0,verbatim=FALSE)
+  (F_iro+F_noiro)/2
+  }
+
+
+range(predict(modlm))
+#lo riduco un po':
+limiti_valori_da_provare=range(predict(modlm))*.9
+valori_da_provare=seq(limiti_valori_da_provare[1],limiti_valori_da_provare[2],length.out = 20)
+
+scores=sapply(valori_da_provare,getScore)
+
+results=cbind(thr=valori_da_provare,scoreTrain=scores)
+results
+plot(valori_da_provare,scores,type = "l",col=2)
+
+max(scores,na.rm = TRUE)
+thr=valori_da_provare[which.max(scores)]
+thr
+```
+
+
+ora lo provo sul test set!
+```{r}
+F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1,verbatim=FALSE)
+F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0,verbatim=FALSE)
+(F_iro+F_noiro)/2
+```
+
+- Calcoliamo l'errore solo per questo threshold. se cercassi il massimo incorrerei in distorsione nella stima (stimo il max tra molti)
+
+
+A titolo di curiosità calcolo gli errori per i diversi treshold sul test set:
+
+```{r}
+getScoreTest <- function(thr){
+  F_iro=F_class(true = tweets$iro[id_test]==1 ,(predict(modlm,newdata = X[id_test,])>thr)==1,verbatim=FALSE)
+  F_noiro=F_class(true = tweets$iro[id_test]==0 ,(predict(modlm,newdata = X[id_test,])>thr)==0,verbatim=FALSE)
+  (F_iro+F_noiro)/2
+}
+
+scoresTest=sapply(valori_da_provare,getScoreTest)
+
+results=cbind(results, scoreTest=scoresTest)
+results
+matplot(valori_da_provare,results[,-1],type = "l",col=2:3,lty=1,lwd=2,ylab="Scores")
+legend("topleft",legend = colnames(results)[-1],lwd=2,lty=1,col=2:3,bty="n")
+```
+
+
+# Modelli di previsione sinergici
+
+```{r}
+
+X0=X
+X0$prev_pos=predict(modlm_pos,newdata = X)
+X0$prev_neg=predict(modlm_neg,newdata = X)
+X0$prev_ironic=predict(modlm_ironic,newdata = X)
+
+contgg=grep("Conteggi\\.",names(X0))
+names(X0)[contgg]=paste("simbolo",sep="",1:length(contgg))
+
+#per avere una risposta numerica 0-1:
+tweets$soggettivo=tweets$soggettivo*1
+
+```
+
+## Task 1
+```{r}
+
+library(rpart)
+modrp=rpart(tweets$soggettivo~.,data=X0,method = "class",cp=0)
+plotcp(modrp)
+modrp=prune(modrp,cp = .003)
+printcp(modrp)
+plot(modrp)
+text(modrp)
+
+
+
+thr=quantile(predict(modrp)[,2],prop.table(table(tweets$soggettivo[-id_test]))[1])
+thr
+predetti=predict(modrp,newdata = X0[id_test,])[,2]>thr
+tab=table( tweets$soggettivo[id_test],predetti)
+tab
+
+F_soggettivo=F_class(true = tweets$soggettivo[id_test] ,predetti==1)
+F_obj=F_class(true = tweets$soggettivo[id_test]==0 ,predetti==0)
+(F_obj+F_soggettivo)/2
+```
+
+
+### submission
+```{r}
+Xtest0=Xtest
+Xtest0$prev_pos=predict(modlm_pos,newdata = Xtest)
+Xtest0$prev_neg=predict(modlm_neg,newdata = Xtest)
+Xtest0$prev_ironic=predict(modlm_ironic,newdata = Xtest)
+
+contgg=grep("Conteggi\\.",names(Xtest0))
+names(Xtest0)[contgg]=paste("simbolo",sep="",1:length(contgg))
+
+
+yhat=predict(modrp,newdata = Xtest0)[,2]>thr
+write.table(file='previsioni/predicted_task1_tree.txt',yhat,row.names = FALSE,col.names = FALSE)
+
+load("/home/livio/bitbucket/r-bee/competitions/evalita2014_task1/evalita2014_task1.RData")
+
+predetti=predict(modrp,newdata = Xtest0)[,2]>thr
+tab=table( Ytest,predetti)
+tab
+
+F_soggettivo=F_class(true = Ytest ,predetti==1)
+F_obj=F_class(true = Ytest==0 ,predetti==0)
+(F_obj+F_soggettivo)/2
+
+```
+
